@@ -44,7 +44,7 @@ jobs:
       - name: Registrar última publicação
         if: success()
         run: |
-          if git diff --quiet -- .state/last-posted-date.txt; then
+          if [ -z "$(git status --porcelain -- .state/last-posted-date.txt)" ]; then
             echo 'Nenhuma alteração de estado para registrar.'
             exit 0
           fi
