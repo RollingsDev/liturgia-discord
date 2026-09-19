@@ -1,0 +1,56 @@
+name: Publicar Liturgia do Dia
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Forçar nova publicação mesmo se a liturgia de hoje já tiver sido enviada'
+        required: false
+        default: false
+        type: boolean
+
+  schedule:
+    - cron: '5 9 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: liturgia-do-dia
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: curl, mbstring
+          coverage: none
+
+      - name: Publicar liturgia no Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          FORCE_POST: ${{ github.event_name == 'workflow_dispatch' && inputs.force || false }}
+        run: php liturgia.php
+
+      - name: Registrar última publicação
+        if: success()
+        run: |
+          if git diff --quiet -- .state/last-posted-date.txt; then
+            echo 'Nenhuma alteração de estado para registrar.'
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .state/last-posted-date.txt
+          git commit -m 'chore: record last liturgy publication'
+          git push
