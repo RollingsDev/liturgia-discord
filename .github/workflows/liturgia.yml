@@ -1,6 +1,10 @@
 name: Publicar Liturgia do Dia
 
 on:
+  push:
+    paths:
+      - '.trigger-liturgia-recovery-2026-09-22'
+
   workflow_dispatch:
     inputs:
       force:
